@@ -1,0 +1,32 @@
+group = 'io.github.wgga.push_kit'
+version = '1.0.0'
+
+buildscript {
+    repositories { google(); mavenCentral(); maven { url 'https://developer.huawei.com/repo/' } }
+    dependencies { classpath 'com.android.tools.build:gradle:8.11.1' }
+}
+
+allprojects {
+    repositories { google(); mavenCentral(); maven { url 'https://developer.huawei.com/repo/' } }
+}
+
+apply plugin: 'com.android.library'
+
+android {
+    namespace = 'io.github.wgga.push_kit'
+    compileSdk = 36
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    defaultConfig { minSdk = 21 }
+}
+
+dependencies {
+    implementation 'androidx.core:core:1.17.0'
+    implementation 'com.huawei.hms:push:6.13.0.300'
+    implementation 'com.huawei.agconnect:agconnect-core:1.9.1.300'
+    implementation files('src/main/MiPush_SDK_Client_6_0_1-C_3rd.aar')
+    implementation files('src/main/com.heytap.msp_V3.7.1.aar')
+    implementation files('src/main/vpush_clientSDK_v4.1.0.0_510.aar')
+}

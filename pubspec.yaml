@@ -1,6 +1,6 @@
 name: push_kit
 description: Flutter bridge for Huawei, Xiaomi, OPPO, vivo and Apple push notifications.
-version: 1.0.0
+version: 1.0.1
 homepage: https://github.com/Wgga/push_kit
 repository: https://github.com/Wgga/push_kit
 issue_tracker: https://github.com/Wgga/push_kit/issues

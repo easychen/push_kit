@@ -13,11 +13,16 @@ dependencies:
   flutter:
     sdk: flutter
   plugin_platform_interface: ^2.0.2
+  args: ^2.7.0
+  xml: ^6.6.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+
+executables:
+  setup: setup
 
 flutter:
   plugin:

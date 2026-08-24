@@ -18,6 +18,7 @@ coverage/
 **/key.properties
 *.jks
 *.keystore
+**/agconnect-services.json
 
 # iOS/Xcode generated files and local settings
 **/Pods/

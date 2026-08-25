@@ -6,13 +6,19 @@ buildscript {
     dependencies { classpath 'com.android.tools.build:gradle:8.11.1' }
 }
 
-allprojects {
+// Resolve the bundled vendor AARs from this plugin regardless of where Pub
+// installs the plugin. Capture the path before entering allprojects; using
+// $projectDir inside that closure would point each consuming project at its
+// own local-repository directory instead.
+def vendorRepository = file('local-repository')
+
+rootProject.allprojects {
     repositories {
         google()
         mavenCentral()
         maven { url 'https://developer.huawei.com/repo/' }
         // Vendor AARs are published into this repository so AGP can bundle this library.
-        maven { url uri("$projectDir/local-repository") }
+        maven { url vendorRepository.toURI() }
     }
 }
 

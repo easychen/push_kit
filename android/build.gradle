@@ -1,5 +1,5 @@
 group = 'io.github.wgga.push_kit'
-version = '1.0.0'
+version = '1.0.2'
 
 buildscript {
     repositories { google(); mavenCentral(); maven { url 'https://developer.huawei.com/repo/' } }
@@ -7,7 +7,13 @@ buildscript {
 }
 
 allprojects {
-    repositories { google(); mavenCentral(); maven { url 'https://developer.huawei.com/repo/' } }
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://developer.huawei.com/repo/' }
+        // Vendor AARs are published into this repository so AGP can bundle this library.
+        maven { url uri("$projectDir/local-repository") }
+    }
 }
 
 apply plugin: 'com.android.library'
@@ -19,14 +25,18 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
-    defaultConfig { minSdk = 21 }
+    defaultConfig {
+        minSdk = 21
+        consumerProguardFiles 'consumer-rules.pro'
+    }
 }
 
 dependencies {
     implementation 'androidx.core:core:1.17.0'
     implementation 'com.huawei.hms:push:6.13.0.300'
     implementation 'com.huawei.agconnect:agconnect-core:1.9.1.300'
-    implementation files('src/main/MiPush_SDK_Client_6_0_1-C_3rd.aar')
-    implementation files('src/main/com.heytap.msp_V3.7.1.aar')
-    implementation files('src/main/vpush_clientSDK_v4.1.0.0_510.aar')
+    // Do not replace these with files('*.aar'): AGP rejects direct local AAR dependencies in AARs.
+    implementation 'io.github.wgga.push-kit-vendor:mipush:6.0.1'
+    implementation 'io.github.wgga.push-kit-vendor:heytap:3.7.1'
+    implementation 'io.github.wgga.push-kit-vendor:vivo:4.1.0.0-510'
 }

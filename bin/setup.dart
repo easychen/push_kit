@@ -35,6 +35,12 @@ Future<void> main(List<String> arguments) async {
         )
         ..addOption('ios-info-plist', help: 'Override iOS Info.plist path.')
         ..addOption('ios-entitlements', help: 'Override iOS entitlements path.')
+        ..addOption(
+          'aps-environment',
+          defaultsTo: 'development',
+          allowed: <String>['development', 'production'],
+          help: 'APNs environment: development or production.',
+        )
         ..addFlag(
           'dry-run',
           negatable: false,
@@ -62,9 +68,17 @@ Future<void> main(List<String> arguments) async {
 
   try {
     final Directory root = Directory(args.option('project')!).absolute;
+    late final Set<PushKitSetupPlatform> platforms;
+    try {
+      platforms = _parsePlatforms(args.option('platforms')!);
+    } on FormatException catch (error) {
+      stderr.writeln('push_kit setup: ${error.message}');
+      exitCode = 64;
+      return;
+    }
     final PushKitSetupOptions options = PushKitSetupOptions(
       projectRoot: root,
-      platforms: _parsePlatforms(args.option('platforms')!),
+      platforms: platforms,
       hmsAppId: args.option('hms-app-id'),
       hmsServices: _resolveFile(root, args.option('hms-services')),
       miAppId: args.option('mi-app-id'),
@@ -77,6 +91,7 @@ Future<void> main(List<String> arguments) async {
       androidValues: _resolveFile(root, args.option('android-values')),
       iosInfoPlist: _resolveFile(root, args.option('ios-info-plist')),
       iosEntitlements: _resolveFile(root, args.option('ios-entitlements')),
+      apsEnvironment: args.option('aps-environment')!,
       dryRun: args.flag('dry-run'),
       checkOnly: args.flag('check'),
     );
@@ -116,12 +131,19 @@ Set<PushKitSetupPlatform> _parsePlatforms(String value) {
         throw FormatException('Unsupported platform: ${raw.trim()}');
     }
   }
+  if (result.isEmpty) {
+    throw FormatException('At least one platform must be selected');
+  }
   return result;
 }
 
 File? _resolveFile(Directory root, String? value) {
-  if (value == null || value.isEmpty) return null;
-  return File(value.startsWith('/') ? value : '${root.path}/$value');
+  final String path = value?.trim() ?? '';
+  if (path.isEmpty) return null;
+  final bool windowsAbsolute =
+      RegExp(r'^[A-Za-z]:[\\/]').hasMatch(path) || path.startsWith(r'\\');
+  final bool absolute = windowsAbsolute || Uri.file(path).isAbsolute;
+  return absolute ? File(path) : File('${root.path}/$path');
 }
 
 String _usage(ArgParser parser) => '''Configure a Flutter host for push_kit.
@@ -131,6 +153,8 @@ Usage:
     --mi-app-id <id> --mi-app-key <key> \\
     --oppo-app-key <key> --oppo-app-secret <secret>
 
-Use --dry-run to preview changes and --check in CI.
+Use --dry-run to preview changes and --check in CI. Vivo initialization also
+requires an explicit Dart consent argument, for example
+`PushKit.vivoInit(true)` after the host privacy statement is accepted.
 
 ${parser.usage}''';

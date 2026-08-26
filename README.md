@@ -117,6 +117,8 @@ if (status == 'notDetermined') {
 
 ```shell
 dart run push_kit:setup --platforms ios
+# 发布包使用 production；开发环境默认 development
+dart run push_kit:setup --platforms ios --aps-environment production
 ```
 
 命令会更新 `ios/Runner/Info.plist` 和 `ios/Runner/Runner.entitlements`。完整宿主工程位于 [`example/ios`](example/ios)，示例已经包含：
@@ -124,6 +126,9 @@ dart run push_kit:setup --platforms ios
 - `Runner/Runner.entitlements` 中的 `aps-environment` 示例值；发布环境请使用与 provisioning profile 一致的值。
 - `Runner/Info.plist` 中的 `remote-notification` 后台模式。
 - `Runner.xcodeproj` 对 entitlements 文件的引用。
+
+如果命令提示 plist 不包含 `<dict>`，请确认这两个文件是有效的 XML plist，且根节点结构为
+`<plist><dict>...</dict></plist>`；不要把二进制 plist 或空文件作为输入。
 
 1. 在 Runner target 的 Signing & Capabilities 中添加 Push Notifications。
 2. 如果需要后台接收通知，添加 Background Modes 并勾选 Remote notifications。
@@ -135,6 +140,10 @@ dart run push_kit:setup --platforms ios
 
 ## 使用
 
+新增或升级插件后，请完全停止并重新启动 Flutter 应用，再订阅
+`PushKit.events`。原生插件是在应用启动时由 `GeneratedPluginRegistrant` 注册的，
+仅执行热重载不会重新注册插件，可能出现 `MissingPluginException`。
+
 ### 监听推送事件
 
 建议在初始化厂商 SDK 前建立事件监听：
@@ -145,7 +154,7 @@ import 'package:push_kit/push_kit.dart';
 final subscription = PushKit.events.listen((PushEvent event) {
   switch (event.name) {
     case PushEventName.receiveNotification:
-      // App 前台收到通知或数据消息。
+      // App 前台收到通知，或后台收到静默/数据消息。
       break;
     case PushEventName.openNotification:
       // 用户点击通知后打开或唤醒 App。
@@ -167,7 +176,8 @@ await subscription.cancel();
 ```dart
 await PushKit.miInit();
 await PushKit.oppoInit();
-await PushKit.vivoInit();
+// 宿主展示并记录厂商隐私声明同意后再初始化：
+await PushKit.vivoInit(true);
 
 await PushKit.appleInit();
 final authorized =
@@ -175,7 +185,9 @@ final authorized =
 final huaweiToken = await PushKit.hwGetToken();
 ```
 
-初始化方法应在 App 启动后调用一次。Huawei、Xiaomi、OPPO 和 vivo 的注册结果会通过
+初始化方法应在 App 启动后调用一次。vivo SDK 要求宿主先取得用户隐私声明同意，
+再通过 `vivoInit(true)`（或 `vivoInit({'privacyAgreed': true})`）传入明确同意结果。
+Huawei、Xiaomi、OPPO 和 vivo 的注册结果会通过
 事件流返回：
 
 ```dart

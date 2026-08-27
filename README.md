@@ -117,7 +117,8 @@ if (status == 'notDetermined') {
 
 ```shell
 dart run push_kit:setup --platforms ios
-# 发布包使用 production；开发环境默认 development
+# 不传参数时保留已有 aps-environment；新建 entitlement 默认 development。
+# 发布包使用 production：
 dart run push_kit:setup --platforms ios --aps-environment production
 ```
 

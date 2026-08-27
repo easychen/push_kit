@@ -21,7 +21,7 @@ class PushKitSetupOptions {
     this.androidValues,
     this.iosInfoPlist,
     this.iosEntitlements,
-    this.apsEnvironment = 'development',
+    this.apsEnvironment,
     this.dryRun = false,
     this.checkOnly = false,
   });
@@ -40,7 +40,10 @@ class PushKitSetupOptions {
   final File? androidValues;
   final File? iosInfoPlist;
   final File? iosEntitlements;
-  final String apsEnvironment;
+
+  /// An explicitly requested APNs environment. When omitted, an existing
+  /// host entitlement is preserved and a missing one defaults to development.
+  final String? apsEnvironment;
   final bool dryRun;
   final bool checkOnly;
 }
@@ -169,13 +172,15 @@ class PushKitConfigurator {
       final bool infoChanged = _configureInfoPlist(info, write: write);
       final bool entitlementChanged = _configureEntitlements(
         entitlements,
-        environment: options.apsEnvironment.trim(),
+        environment: options.apsEnvironment?.trim(),
         write: write,
       );
+      final String infoPlistPath = _relativeToIos(root, info);
       final String entitlementPath = _relativeToIos(root, entitlements);
       final bool projectChanged = _configureXcodeProject(
         projectFile,
-        entitlementPath,
+        infoPlistPath: infoPlistPath,
+        entitlementPath: entitlementPath,
         write: write,
       );
       pending |= infoChanged || entitlementChanged || projectChanged;
@@ -205,8 +210,9 @@ class PushKitConfigurator {
     if (options.platforms.isEmpty) {
       throw ArgumentError('At least one platform must be selected.');
     }
-    final String environment = options.apsEnvironment.trim();
-    if (!<String>{'development', 'production'}.contains(environment)) {
+    final String? environment = options.apsEnvironment?.trim();
+    if (environment != null &&
+        !<String>{'development', 'production'}.contains(environment)) {
       throw ArgumentError(
         'APNs environment must be development or production.',
       );
@@ -514,7 +520,7 @@ class PushKitConfigurator {
 
   bool _configureEntitlements(
     File file, {
-    required String environment,
+    required String? environment,
     required bool write,
   }) {
     final XmlDocument document =
@@ -531,12 +537,13 @@ class PushKitConfigurator {
         dict,
         'aps-environment',
         XmlElement(XmlName('string'), <XmlAttribute>[], <XmlNode>[
-          XmlText(environment),
+          XmlText(environment ?? 'development'),
         ]),
       );
       changed = true;
-    } else if (existing.name.local != 'string' ||
-        existing.innerText != environment) {
+    } else if (environment != null &&
+        (existing.name.local != 'string' ||
+            existing.innerText != environment)) {
       final int index = dict.children.indexOf(existing);
       if (index < 0) {
         throw StateError('Malformed aps-environment entry: ${file.path}');
@@ -640,8 +647,9 @@ class PushKitConfigurator {
           .toList();
 
   bool _configureXcodeProject(
-    File file,
-    String entitlementPath, {
+    File file, {
+    required String infoPlistPath,
+    required String entitlementPath,
     required bool write,
   }) {
     if (!file.existsSync()) {
@@ -665,6 +673,7 @@ class PushKitConfigurator {
     final RegExp entitlements = RegExp(
       r'^(\s*)CODE_SIGN_ENTITLEMENTS\s*=\s*(?:"([^"]*)"|([^;]+))\s*;\s*$',
     );
+    final String expectedInfoPlistPath = _normalizePbxPath(infoPlistPath);
     while (index < lines.length) {
       if (!start.hasMatch(lines[index])) {
         updated.add(lines[index++]);
@@ -682,7 +691,15 @@ class PushKitConfigurator {
       final int infoIndex = block.indexWhere(
         (String line) => info.hasMatch(line),
       );
-      if (infoIndex >= 0) {
+      final RegExpMatch? infoMatch =
+          infoIndex >= 0 ? info.firstMatch(block[infoIndex]) : null;
+      final String actualInfoPlistPath =
+          infoMatch == null
+              ? ''
+              : _normalizePbxPath(
+                infoMatch.group(1) ?? infoMatch.group(2) ?? '',
+              );
+      if (actualInfoPlistPath == expectedInfoPlistPath) {
         matchedBlocks++;
         final List<int> existingEntitlements = <int>[];
         for (int lineIndex = 0; lineIndex < block.length; lineIndex++) {
@@ -717,7 +734,7 @@ class PushKitConfigurator {
     }
     if (matchedBlocks == 0) {
       throw StateError(
-        'No Xcode build configuration with INFOPLIST_FILE was found in ${file.path}',
+        'No Xcode build configuration for $infoPlistPath was found in ${file.path}',
       );
     }
     if (!changed) return false;
@@ -734,6 +751,14 @@ class PushKitConfigurator {
     final String encoded =
         needsQuotes ? '"${normalized.replaceAll('"', '\\"')}"' : normalized;
     return '$key = $encoded;';
+  }
+
+  String _normalizePbxPath(String path) {
+    String normalized = path.trim().replaceAll('\\', '/');
+    while (normalized.startsWith('./')) {
+      normalized = normalized.substring(2);
+    }
+    return normalized;
   }
 
   File _fileOrDefault(Directory root, File? input, String relative) =>

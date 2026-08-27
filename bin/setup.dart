@@ -37,9 +37,9 @@ Future<void> main(List<String> arguments) async {
         ..addOption('ios-entitlements', help: 'Override iOS entitlements path.')
         ..addOption(
           'aps-environment',
-          defaultsTo: 'development',
           allowed: <String>['development', 'production'],
-          help: 'APNs environment: development or production.',
+          help:
+              'APNs environment. Omit to preserve an existing value; a new entitlement defaults to development.',
         )
         ..addFlag(
           'dry-run',
@@ -91,7 +91,7 @@ Future<void> main(List<String> arguments) async {
       androidValues: _resolveFile(root, args.option('android-values')),
       iosInfoPlist: _resolveFile(root, args.option('ios-info-plist')),
       iosEntitlements: _resolveFile(root, args.option('ios-entitlements')),
-      apsEnvironment: args.option('aps-environment')!,
+      apsEnvironment: args.option('aps-environment'),
       dryRun: args.flag('dry-run'),
       checkOnly: args.flag('check'),
     );

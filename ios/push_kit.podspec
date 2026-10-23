@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'push_kit'
-  s.version          = '1.0.2'
+  s.version          = '1.1.0'
   s.summary          = 'Flutter push notifications for Huawei, Xiaomi, OPPO, vivo and Apple.'
   s.description      = s.summary
   s.homepage         = 'https://github.com/Wgga/push_kit'

@@ -1,0 +1,51 @@
+{
+  "module": {
+    "name": "entry",
+    "type": "entry",
+    "description": "$string:module_desc",
+    "mainElement": "EntryAbility",
+    "deviceTypes": [
+      "phone"
+    ],
+    "deliveryWithInstall": true,
+    "installationFree": false,
+    "pages": "$profile:main_pages",
+    // Push Kit 的 client_id 来自 AppGallery Connect 的“项目设置 > 常规 > 应用”，
+    // 必须与签名证书对应的应用一致，否则 getToken 会失败。
+    "metadata": [
+      {
+        "name": "client_id",
+        "value": "replace-with-your-agc-client-id"
+      }
+    ],
+    "abilities": [
+      {
+        "name": "EntryAbility",
+        "srcEntry": "./ets/entryability/EntryAbility.ets",
+        "description": "$string:EntryAbility_desc",
+        "icon": "$media:icon",
+        "label": "$string:EntryAbility_label",
+        "startWindowIcon": "$media:icon",
+        "startWindowBackground": "$color:start_window_background",
+        "exported": true,
+        "skills": [
+          {
+            "entities": [
+              "entity.system.home"
+            ],
+            "actions": [
+              "action.system.home"
+            ]
+          }
+          // clickAction.actionType 为 1 时，可在服务端指定 data 中的 action/uri，
+          // 需要在此处补充对应的 actions 或 uris 才能拉起自定义页面。
+        ]
+      }
+    ],
+    "requestPermissions": [
+      {
+        "name": "ohos.permission.INTERNET"
+      }
+    ]
+  }
+}

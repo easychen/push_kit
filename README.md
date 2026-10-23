@@ -2,23 +2,23 @@
 
 [![License](https://img.shields.io/github/license/Wgga/push_kit)](https://github.com/Wgga/push_kit/blob/main/LICENSE)
 
-统一 Huawei、Xiaomi、OPPO、vivo 和 Apple 推送服务的 Flutter 插件，支持 Android
-和 iOS。插件通过统一的 Dart API 初始化厂商推送 SDK，并通过事件流返回通知、点击、
-注册和权限变化。
+统一 Huawei、Xiaomi、OPPO、vivo、Apple 和 HarmonyOS 推送服务的 Flutter 插件，
+支持 Android、iOS 和 HarmonyOS。插件通过统一的 Dart API 初始化厂商推送 SDK，
+并通过事件流返回通知、点击、注册和权限变化。
 
 ## 功能
 
-| 功能 | Android | iOS |
-| --- | :---: | :---: |
-| Huawei 获取 Push Token | 支持 | — |
-| Xiaomi 推送初始化和注册回调 | 支持 | — |
-| OPPO 推送初始化和通知权限 | 支持 | — |
-| vivo 推送初始化和注册回调 | 支持 | — |
-| Apple APNs 注册 | — | 支持 |
-| Apple 通知授权和状态查询 | — | 支持 |
-| Android 13 通知权限 | 支持 | — |
-| 推送通知事件流 | 支持 | 支持 |
-| Android 主机 Ping | 支持 | — |
+| 功能 | Android | iOS | 鸿蒙 |
+| --- | :---: | :---: | :---: |
+| 获取 Push Token | 支持 | — | 支持（Push Kit） |
+| Xiaomi 推送初始化和注册回调 | 支持 | — | — |
+| OPPO 推送初始化和通知权限 | 支持 | — | — |
+| vivo 推送初始化和注册回调 | 支持 | — | — |
+| Apple APNs 注册 | — | 支持 | — |
+| Apple 通知授权和状态查询 | — | 支持 | — |
+| 通知权限查询和申请 | 支持 | — | 支持 |
+| 推送通知事件流 | 支持 | 支持 | 支持 |
+| 主机 Ping | 支持 | — | — |
 
 ## 环境要求
 
@@ -26,6 +26,7 @@
 - Flutter `>=3.29.0`
 - Android API 21 或更高、AndroidX、Java 17
 - iOS 12.0 或更高
+- 鸿蒙 HarmonyOS 5.0.0（API 12）或更高，需安装 DevEco Studio 与本机签名证书
 - Android 工程使用 Gradle 8 或更高版本
 
 ## 安装
@@ -110,6 +111,80 @@ if (status == 'notDetermined') {
 ```
 
 插件会自动合并网络、唤醒锁、震动和 `POST_NOTIFICATIONS` 等所需 Manifest 权限。
+
+## 鸿蒙配置
+
+鸿蒙端直接使用系统 Push Kit，不需要引入第三方推送 SDK。`ohos/` 是 HAR 源码模块，
+由 Flutter 工具自动 include 到宿主的 `ohos` 工程，`GeneratedPluginRegistrant` 会注册
+`PushKitPlugin`。
+
+### 前置条件
+
+- 在 AppGallery Connect 为 HarmonyOS 应用开通推送服务，并完成签名信息配置。
+- 使用与 AppGallery Connect 应用一致的**签名证书和 Profile** 打包，签名不一致会导致
+  `getToken` 失败（常见错误码 `1000900010`）。
+- 测试设备已登录华为账号。
+
+### 配置 client_id
+
+在宿主 `entry/src/main/module.json5` 的 `module.metadata` 中填入 AGC 的 `client_id`：
+
+```json5
+"metadata": [
+  { "name": "client_id", "value": "your-agc-client-id" }
+]
+```
+
+宿主需要 `ohos.permission.INTERNET`（插件模块已声明，构建时会自动合并）。
+完整可运行工程见 [`example/ohos`](example/ohos)。
+
+### Dart API 映射
+
+| Dart API | 鸿蒙实现 |
+| --- | --- |
+| `hwGetToken()` | `pushService.getToken()`，即 HarmonyOS Push Token |
+| `checkNotificationPermission()` | `notificationManager.isNotificationEnabled()`，返回 `granted` / `denied` |
+| `requestNotificationPermission()` | `notificationManager.requestEnableNotification()`，返回 `granted` / `denied` |
+| `miInit` / `oppoInit` / `vivoInit` / `appleInit` | 空实现并返回成功，鸿蒙侧统一由 Push Kit 下发 |
+| `oppoRequestNotificationPermission` | 等同 `requestNotificationPermission`，返回成功（不回传状态） |
+| `appleRequestAuthorizationWithOptions` | 返回 `false` |
+| `appleGetSetting` | 返回 `NotDetermined` |
+| `ping` | 抛出 `PlatformException('unsupported')`，仅 Android 支持 |
+
+鸿蒙没有“未询问”状态，`checkNotificationPermission` 只会返回 `granted` 或 `denied`。
+
+### 事件
+
+| 事件名 | 触发时机 | `data` |
+| --- | --- | --- |
+| `push.receiveNotification` | 应用在前台收到通知消息（`receiveMessage('DEFAULT')`） | 服务端下发的 `data` 字段，JSON 解析后的键值；非 JSON 时放在 `data` 键 |
+| `push.openNotification` | 用户点击通知（冷启动取 `launchWant`，热启动取 `onNewWant`） | `want.parameters` 的键值（已过滤 `ohos.*`、`component.*` 等系统启动参数），另附 `action` / `uri` |
+| `hms.token` | Push Token 变化（`tokenUpdate`） | `token` |
+
+`push.openNotification` 的 `data` 来自服务端 `clickAction.data`。例如服务端下发
+`"clickAction": { "actionType": 1, "action": "com.test.action", "data": { "testKey": "testValue" } }`，
+客户端在事件中即可取到 `event.data['testKey']`；`actionType` 为 1 时还需要在目标
+Ability 的 `skills` 中声明匹配的 `actions` 或 `uris`。
+
+监听方式与 Android / iOS 一致：
+
+```dart
+PushKit.events.listen((PushEvent event) {
+  if (event.name == PushEventName.openNotification) {
+    final testKey = event.data['testKey'];
+  }
+});
+```
+
+### 构建
+
+```shell
+cd example
+flutter build hap --debug
+```
+
+未配置签名时，Flutter 会提示用 DevEco Studio 打开 `example/ohos`，在
+File -> Project Structure -> Signing Configs 中勾选自动签名后再构建。
 
 ## iOS 配置
 
@@ -234,6 +309,13 @@ Android 插件内置以下厂商 AAR：
 
 内置二进制 SDK 可能有独立的授权和再分发条款。公开发布插件前，请确认对应厂商许可，
 并在仓库中补充其许可证和版权声明。
+
+鸿蒙端直接使用系统 Kit，不引入任何二进制依赖：
+
+| Kit | 用途 |
+| --- | --- |
+| `@kit.PushKit` | 获取 Push Token、接收消息、监听 Token 变化 |
+| `@kit.NotificationKit` | 通知权限查询与申请 |
 
 ## 示例与测试
 

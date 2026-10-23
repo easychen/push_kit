@@ -21,6 +21,9 @@ migration:
     - platform: ios
       create_revision: 244a0e8abb3085e8675589b13e219af8c41cb7aa
       base_revision: 244a0e8abb3085e8675589b13e219af8c41cb7aa
+    - platform: ohos
+      create_revision: 244a0e8abb3085e8675589b13e219af8c41cb7aa
+      base_revision: 244a0e8abb3085e8675589b13e219af8c41cb7aa
 
   # User provided section
 

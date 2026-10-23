@@ -1,3 +1,11 @@
+## 1.1.0
+
+- Add HarmonyOS support backed by Push Kit: Push Token via `hwGetToken`, notification
+  permission query/request via Notification Kit, foreground messages, notification taps
+  and token updates through the existing event stream.
+- Ignore HarmonyOS system launch parameters (`ohos.*`, `component.*`, home actions) when
+  deriving `push.openNotification`, so a plain cold start no longer reports a tap.
+
 ## 1.0.2
 
 - Fix Android library packaging with AGP 8 by resolving bundled vendor AARs through a local Maven repository.

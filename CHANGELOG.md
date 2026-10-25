@@ -1,3 +1,10 @@
+## Unreleased
+
+- Fix Xiaomi push on MIUI / HyperOS devices: declare `MiPushReceiver` as `android:exported="true"`.
+  On these devices registration results and messages are broadcast by the system push service
+  `com.xiaomi.xmsf` (a different uid), so a non-exported receiver is rejected with
+  `Permission Denial: ... is not exported` and the app never receives its regId.
+
 ## 1.1.0
 
 - Add HarmonyOS support backed by Push Kit: Push Token via `hwGetToken`, notification

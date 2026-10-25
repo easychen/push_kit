@@ -19,7 +19,7 @@
         <service android:name=".PushHmsMessageService" android:exported="false">
             <intent-filter><action android:name="com.huawei.push.action.MESSAGING_EVENT" /></intent-filter>
         </service>
-        <receiver android:name=".MiPushReceiver" android:exported="false">
+        <receiver android:name=".MiPushReceiver" android:exported="true">
             <intent-filter><action android:name="com.xiaomi.mipush.RECEIVE_MESSAGE" /></intent-filter>
             <intent-filter><action android:name="com.xiaomi.mipush.MESSAGE_ARRIVED" /></intent-filter>
             <intent-filter><action android:name="com.xiaomi.mipush.ERROR" /></intent-filter>
